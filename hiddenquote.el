@@ -1,12 +1,12 @@
 ;;; hiddenquote.el --- Major mode for doing hidden quote puzzles -*- lexical-binding: t -*-
 
-;; Copyright (C) 2020-2021  Free Software Foundation, Inc.
+;; Copyright (C) 2020-2022  Free Software Foundation, Inc.
 
 ;; Author: Mauro Aranda <maurooaranda@gmail.com>
 ;; Maintainer: Mauro Aranda <maurooaranda@gmail.com>
 ;; Created: Sun Dec 13 11:10:00 2020
-;; Version: 1.1
-;; Package-Version: 1.1
+;; Version: 1.2
+;; Package-Version: 1.2
 ;; Package-Requires: ((emacs "25.1"))
 ;; URL: http://mauroaranda.com/puzzles/hidden-quote-puzzle/
 ;; Keywords: games
@@ -29,7 +29,7 @@
 ;;; Commentary:
 ;;
 ;; hiddenquote is a kind of word puzzle where you have to read
-;; word definitions (the clues), and put the answer into a grid, using
+;; word definitions (the clues), and put the answers into a grid, using
 ;; the provided syllables.  When the grid is complete, you should be able
 ;; to read a quote in the highlighted cells.
 ;;
@@ -46,7 +46,7 @@
 ;; With a prefix argument, the command will prompt for a specific ID number.
 ;;
 ;; Read the clues in the Definitions buffer, and complete each word with
-;; one character per cell to complete the puzzle.  For each work, mark the
+;; one character per cell to complete the puzzle.  For each word, mark the
 ;; syllables it contains as used.
 ;; Move around the buffer with the usual movement commands.
 ;; Edit each character cell with the usual editing commands.
@@ -81,7 +81,7 @@
 
 ;; Customization.
 (defgroup hiddenquote nil
-  "Solve hiddenquote in Emacs."
+  "Solve hiddenquote puzzles in Emacs."
   :group 'games
   :version "0.1")
 
@@ -91,15 +91,14 @@
   "An alist of hidden quote puzzle sources.
 Each member is of the form (SOURCE-NAME ORIG-FORMAT FUNCTION).
 
-SOURCE-NAME should be a string, an unique name for the source/publisher.
+SOURCE-NAME should be a string, a unique name for the source/publisher.
 ORIG-FORMAT should be a symbol naming the format in which the puzzle
 is retrieved.  At the moment, there is builtin support for two formats:
-.ipuz format and html format.
+ipuz format and html format.
 
-REST should be a function that retrieves an instance of
-`hiddenquote-hidden-quote-puzzle'.
-
-The function handles the prefix arg given to `hiddenquote'."
+FUNCTION should be a function that retrieves an instance of
+`hiddenquote-hidden-quote-puzzle'.  The function should take one argument,
+which is the prefix arg given to `hiddenquote'."
   :type '(repeat :tag "Hidden Quote Sources"
                  (choice
                   (list :tag "IPUZ"
@@ -114,7 +113,7 @@ The function handles the prefix arg given to `hiddenquote'."
   :package-version '(hiddenquote . "0.1"))
 
 (defcustom hiddenquote-mode-hook nil
-  "Hook to run when entering `hiddenquote-mode'."
+  "Hook to run after entering `hiddenquote-mode'."
   :type 'hook
   :package-version '(hiddenquote . "0.1"))
 
@@ -174,7 +173,6 @@ Syllables window."
                     do (set-window-parameter (get-buffer-window buff)
                                              'no-other-window val)))))
 
-
 (defgroup hiddenquote-faces nil
   "Faces used by `hiddenquote'."
   :group 'hiddenquote)
@@ -195,7 +193,7 @@ Syllables window."
 
 (defface hiddenquote-sep
   '((t (:height 0.1 :inherit default)))
-  "Face to use in character-separating spaces."
+  "Face used in character-separating spaces."
   :package-version '(hiddenquote . "0.1"))
 
 (defface hiddenquote-word-number
@@ -219,32 +217,32 @@ Syllables window."
 
 (defface hiddenquote-value
   '((t (:foreground "#333" :background "gray80" :inherit hiddenquote)))
-  "Face for characters inserted by the user."
+  "Face used for characters inserted by the user."
   :package-version '(hiddenquote . "0.1"))
 
 (defface hiddenquote-quote-value
   '((t (:foreground "#333" :background "#fcee21" :inherit hiddenquote)))
-  "Face for the characters in the grid that hold the quote."
+  "Face used for the characters in the grid that hold the quote."
   :package-version '(hiddenquote . "0.1"))
 
 (defface hiddenquote-used-syllable
   '((t (:foreground "black" :background "yellow" :inherit hiddenquote)))
-  "Face for syllables that the user has used."
+  "Face used for syllables that the user has used."
   :package-version '(hiddenquote . "0.1"))
 
 (defface hiddenquote-unused-syllable
   '((t (:inherit hiddenquote)))
-  "Face for syllables that the user hasn't used."
+  "Face used for syllables that the user hasn't used."
   :package-version '(hiddenquote . "0.1"))
 
 (defface hiddenquote-highlight-syllable
   '((t (:background "#fcee21" :height 1.5 :inherit default)))
-  "Face for highlighting syllables when the mouse hovers."
+  "Face used for highlighting syllables when the mouse hovers."
   :package-version '(hiddenquote . "0.1"))
 
 (defface hiddenquote-widget-highlight
   '((t (:background "#fcee21" :inherit hiddenquote)))
-  "Face for highlighting a widget."
+  "Face used for highlighting a widget."
   :package-version '(hiddenquote . "0.1"))
 
 (defface hiddenquote-highlight
@@ -253,7 +251,7 @@ Syllables window."
     (((class color) (background dark))
      (:background "#fcee21" :foreground "black"))
     (t (:inherit default)))
-  "Face for highlighting the current definition."
+  "Face used for highlighting the current definition."
   :package-version '(hiddenquote . "0.1"))
 
 (defface hiddenquote-doc
@@ -318,13 +316,24 @@ Syllables window."
     (define-key map "\t" #'hiddenquote-forward-syllable)
     (define-key map [(shift tab)] #'hiddenquote-backward-syllable)
     (define-key map [backtab] #'hiddenquote-backward-syllable)
-    map))
+    (define-key map "f" #'hiddenquote-forward-syllable)
+    (define-key map "\C-f" #'hiddenquote-forward-syllable)
+    (define-key map "b" #'hiddenquote-backward-syllable)
+    (define-key map "\C-b" #'hiddenquote-backward-syllable)
+    (define-key map "n" #'next-line)
+    (define-key map "p" #'previous-line)
+    (define-key map "a" #'hiddenquote-beg-of-line-syllable)
+    (define-key map "\C-a" #'hiddenquote-beg-of-line-syllable)
+    (define-key map "e" #'hiddenquote-end-of-line-syllable)
+    (define-key map "\C-e" #'hiddenquote-end-of-line-syllable)
+    map)
+  "Keymap for the Syllables buffer.")
 
 (defvar hiddenquote-previous-window-configuration nil
   "Holds the window configuration before `hiddenquote' creates its windows.")
 
 (defvar-local hiddenquote-current nil
-  "Hold the current puzzle, a `hiddenquote-grid' widget.")
+  "Holds the current puzzle, a `hiddenquote-grid' widget.")
 
 (defvar-local hiddenquote-definition-markers nil
   "A vector of cons-cells (START . END), the START and END of a definition.
@@ -332,7 +341,7 @@ Syllables window."
 Used locally in the definitions buffer, to highlight/unhighlight them.")
 
 (defvar-local hiddenquote-syllables nil
-  "Hold all syllable widgets in the syllables buffer.")
+  "Holds all syllable widgets in the syllables buffer.")
 
 (defvar-local hiddenquote-buffer nil "The buffer where the grid is at.")
 
@@ -371,6 +380,23 @@ Used locally in the definitions buffer, to highlight/unhighlight them.")
   "Compatibility function, to avoid `widget-backward' to skip widgets."
   (unless (eobp)
     (forward-char 1)))
+
+(defun hiddenquote--get-quote-length ()
+  "Return the quote length, by looking each word in the widget."
+  ;; We have to do this when the qquote slot is empty.
+  (let* ((puzzle (widget-get hiddenquote-current :hiddenquote))
+         (words (widget-get hiddenquote-current :children))
+         (arrows (split-string (oref puzzle arrows) ","))
+         (len (* (length arrows) (length words)))
+         (first-word (car words))
+         (last-word (car (last words))))
+    (unless (> (widget-get last-word :hiddenquote-word-length)
+               (string-to-number (car (last arrows))))
+      (setq len (1- len)))
+    (unless (> (widget-get first-word :hiddenquote-word-length)
+               (string-to-number (car arrows)))
+      (setq len (1- len)))
+    len))
 
 ;; Classes.
 ;; A `hiddenquote-hidden-quote-puzzle' represents a hidden quote puzzle,
@@ -483,7 +509,7 @@ It has to be of the form ARR1,ARR2")
          :documentation "Filename to save this puzzle, in ipuz format.")))
 
 ;; A `hiddenquote-edit' object is an object that holds the user edits
-;; in a playing session.  This information can be saved, in an .ipuz file,
+;; in a playing session.  This information can be saved in an .ipuz file,
 ;; effectively saving user progress.
 (defclass hiddenquote-edit ()
   ((answers :initarg :answers
@@ -750,7 +776,7 @@ values."
   :value-to-internal (lambda (_widget value)
                        (if (stringp value) value (char-to-string value)))
   :keymap hiddenquote-character-map
-  :help-echo "")
+  :help-echo nil)
 
 (define-widget 'hiddenquote-timer 'item
   "A widget that shows the elapsed time starting from its creation."
@@ -774,6 +800,7 @@ values."
 
 (defun hiddenquote-grid-convert-widget (widget)
   "Initialize :tag and :doc properties of `hiddenquote-grid' widget WIDGET.
+
 Use the number slot of a `hiddenquote-hidden-quote-puzzle' object to build
 the :tag, and use the description slot to build the :doc."
   (let ((puzzle (nth 0 (widget-get widget :args))))
@@ -849,6 +876,7 @@ the :tag, and use the description slot to build the :doc."
 
 (defun hiddenquote-word-value-create (widget)
   "Create a `hiddenquote-word' widget WIDGET, by creating each character cell.
+
 Highlight the character cells that form the quote."
   (let ((arrows (split-string
                  (oref (widget-get (widget-get widget :parent) :hiddenquote)
@@ -898,6 +926,7 @@ Highlight the character cells that form the quote."
 
 (defun hiddenquote-after-change (from to _old)
   "Compatibility `after-change-function' for Emacs < 28.
+
 Starting from Emacs 28.1, `widget-after-change' passes a fake event to the
 field :notify function.  We use that fake event to figure out what to do.
 
@@ -909,19 +938,29 @@ Notify the widget between FROM and TO about a change."
         (error "Change in different fields"))
       (widget-apply field :notify field (list 'after-change from to)))))
 
+(defvar hiddenquote-after-last-character-hook nil
+  "Hook that runs after entering the last character in a word.
+
+Note that this doesn't mean the word is the right word.
+
+It can be handy to run `other-window' in this hook, so you can go directly
+to the syllables buffer.")
+
 (defun hiddenquote-word-notify (widget child event)
   "Notify the `hiddenquote-word' widget WIDGET about a change in CHILD.
 
 If the car of EVENT is `before-change', this function just calls
-`widget-default-notify'.  If the of EVENT is `after-change', then advance
-point to some other widget and maybe check the answer."
+`widget-default-notify'.  If the car of EVENT is `after-change',
+advance point to some other widget and maybe check the answer."
   ;; When CHILD is the last WIDGET's children, go to the first child.
   (when (and (eq (car-safe event) 'after-change)
              (not (eql (nth 1 event) (nth 2 event))))
     (if (eq child (car (last (widget-get widget :children))))
-        (goto-char (overlay-start
-                    (widget-get (car (widget-get widget :children))
-                                :field-overlay)))
+        (progn
+          (goto-char (overlay-start
+                      (widget-get (car (widget-get widget :children))
+                                  :field-overlay)))
+          (run-hooks 'hiddenquote-after-last-character-hook)) 
       (widget-forward 1)))
   (when (and (eq (car-safe event) 'after-change)
              (or hiddenquote-automatic-check
@@ -934,7 +973,7 @@ point to some other widget and maybe check the answer."
   (widget-default-notify widget child event))
 
 (defun hiddenquote-word-validate (widget)
-  "Nil if current value of hiddenquote-word WIDGET is correct."
+  "Nil if the current value of the hiddenquote-word WIDGET is correct."
   (let ((val (widget-value widget))
         (puzzle (widget-get (widget-get widget :parent) :hiddenquote)))
     (unless (string-collate-equalp
@@ -946,6 +985,7 @@ point to some other widget and maybe check the answer."
 
 (defun hiddenquote-character-notify (widget child &optional event)
   "Replace characters in character widget WIDGET, so its size is always 1.
+
 Checks that the car of EVENT is `after-change'.
 
 Calls `widget-default-notify' with WIDGET, CHILD and EVENT as args."
@@ -1079,6 +1119,7 @@ Calls `widget-default-notify' with WIDGET, CHILD and EVENT as args."
 
 (defun hiddenquote-syllable-button-face-get (widget)
   "Return the face to use by the `hiddenquote-syllable' widget WIDGET.
+
 Return `hiddenquote-used-syllable' if WIDGET's value is non-nil,
 `hiddenquote-unused-syllable' otherwise."
   (if (widget-value widget)
@@ -1141,6 +1182,7 @@ Return `hiddenquote-used-syllable' if WIDGET's value is non-nil,
 
 (defun hiddenquote-get-local-puzzle (&optional n)
   "Return a puzzle from this package `puzzles' directory.
+
 With N non-nil, return that puzzle, otherwise return the newest one."
   (let* ((num (and n (read-number "Enter a puzzle number: ")))
          (dir (file-name-directory (locate-library "hiddenquote")))
@@ -1177,7 +1219,7 @@ With N non-nil, return that puzzle, otherwise return the newest one."
                     (prog1 (buffer-string)
                       (kill-buffer)))))
     puzzle))
-			    
+
 (defun hiddenquote-get-hidden-quote-puzzle (&optional n)
   "Return a puzzle from the hidden-quote puzzle source.
 
@@ -1232,7 +1274,7 @@ puzzle Nº."
                            '(face default)))))
 
 (defun hiddenquote-timer-start-timer (widget)
-  "Start the `hiddenquote-timer' WIDGET."
+  "Start the `hiddenquote-timer' widget WIDGET."
   (unless (widget-get widget :hiddenquote-start) ; Alreay started.
     (let ((elapsed (if (fboundp 'time-convert) ; Emacs 27.1
                        (time-convert
@@ -1310,7 +1352,8 @@ puzzle Nº."
     (define-key-after map [sep] menu-bar-separator)
     (tool-bar-local-item-from-menu #'hiddenquote-check-answer "search" map
                                    hiddenquote-character-map)
-    map))
+    map)
+  "Tool-bar support for hiddenquote.")
 
 (define-derived-mode hiddenquote-mode nil "Hiddenquote"
   "Major mode for `hiddenquote'.
@@ -1394,13 +1437,13 @@ Character cell bindings:
     (forward-line -1)))
 
 (defun hiddenquote-move-beginning-of-word ()
-  "Go to the first character of the word point is at."
+  "Go to the first character of the word where point is at."
   (interactive)
   (forward-line 0)
   (widget-forward 1))
 
 (defun hiddenquote-move-end-of-word ()
-  "Go to the last character of the word point is at."
+  "Go to the last character of the word where point is at."
   (interactive)
   (let ((inhibit-field-text-motion t))
     (end-of-line)
@@ -1417,7 +1460,7 @@ Character cell bindings:
                 :from))))
 
 (defun hiddenquote-forward-syllable ()
-  "Move N syllables forward."
+  "Move one syllable forward."
   (interactive)
   (if hiddenquote-skip-used-syllables
       (let ((orig (widget-at)))
@@ -1428,7 +1471,7 @@ Character cell bindings:
     (widget-forward 1)))
 
 (defun hiddenquote-backward-syllable ()
-  "Move N syllables backward."
+  "Move one syllable backward."
   (interactive)
   (if hiddenquote-skip-used-syllables
       (let ((orig (widget-at)))
@@ -1438,8 +1481,79 @@ Character cell bindings:
           (widget-backward 1)))
     (widget-backward 1)))
 
+(defun hiddenquote-beg-of-line-syllable ()
+  "Move to the first syllable in the current line."
+  (interactive)
+  (beginning-of-line))
+
+(defun hiddenquote-end-of-line-syllable ()
+  "Move to the last syllable in the current line."
+  (interactive)
+  (end-of-line)
+  (widget-backward 1))
+
+(defun hiddenquote-complete-quote (str)
+  "Complete the quote with the string STR.
+
+Interactively, prompts for the string.
+
+This command comes handy when you have figured out the quote but not yet
+every word."
+  (interactive (list (read-string "Quote: ")))
+  (setq str
+        (replace-regexp-in-string "\\([[:blank:]]\\|[[:punct:]]\\)" "" str))
+  ;; First, check the length.
+  (let ((len (if (string-empty-p
+                  (oref (widget-get hiddenquote-current :hiddenquote) qquote))
+                 (hiddenquote--get-quote-length)
+               (length
+                (replace-regexp-in-string "\\([[:blank:]]\\|[[:punct:]]\\)" ""
+                                          (oref
+                                           (widget-get hiddenquote-current
+                                                       :hiddenquote)
+                                           qquote))))))
+    (if (/= len (length str))
+        (user-error "Wrong quote length")
+      ;; Ok, let's set it.
+      ;; Run through the string, and set each character cell value to
+      ;; the right value.
+      (save-excursion
+        (cl-loop for ch across str
+                 with i = 0
+                 with words = (widget-get hiddenquote-current :children)
+                 with l = (length words)
+                 with puzzle = (widget-get hiddenquote-current :hiddenquote)
+                 with arrows = (let ((lst (split-string
+                                           (oref puzzle arrows) ",")))
+                                 (cons (string-to-number (car lst))
+                                       (string-to-number (cadr lst))))
+                 with arrow = (car arrows)
+                 with word
+                 with characters
+                 do
+                 (when (>= i l)
+                   (setq i 0
+                         arrow (cdr arrows)))
+                 (setq word (nth i words)
+                       characters (widget-get word :children))
+                 ;; This is an edge case.  It might happen that the first word
+                 ;; doesn't have the 2nd arrow (or greater).  So skip it, and
+                 ;; set the character in the next word.
+                 ;; Of course the last word may not have the 2nd arrow
+                 ;; (or greater), but by then this loop has already completed,
+                 ;; so it doesn't matter.
+                 (when (>= (1- arrow) (length characters))
+                   (setq i (1+ i)
+                         word (nth i words)
+                         characters (widget-get word :children)))
+                 ;; Don't mess with what's already there.
+                 (when (char-equal (widget-value (nth (1- arrow) characters))
+                                   ?\s)
+                   (widget-value-set (nth (1- arrow) characters) ch))
+                 (setq i (1+ i)))))))
+
 (defun hiddenquote-check-answer ()
-  "Check if the answer for the word point is at is right or wrong."
+  "Check if the answer for the word where point is at is right or wrong."
   (interactive)
   (let ((parent (widget-get (widget-at) :parent)))
     (widget-apply-action (nth (widget-get parent :hiddenquote-word-number)
@@ -1451,6 +1565,12 @@ Character cell bindings:
   (interactive)
   (customize-set-variable 'hiddenquote-automatic-check
                           (not hiddenquote-automatic-check)))
+
+(defun hiddenquote-toggle-skip-used-syllables ()
+  "Toggle the `hiddenquote-skip-used-syllables' variable."
+  (interactive)
+  (customize-set-variable 'hiddenquote-skip-used-syllables
+                          (not hiddenquote-skip-used-syllables)))
 
 (defun hiddenquote-save ()
   "Save the puzzle and the user progress."
@@ -1483,10 +1603,13 @@ Character cell bindings:
       (write-file (oref puzzle file)))
     (message "Saved puzzle in %s" (oref puzzle file))))
 
-(defun hiddenquote-give-up ()
-  "Give up completing the puzzle, showing the solutions."
-  (interactive)
-  (when (yes-or-no-p "Really give up? ")
+(defun hiddenquote-give-up (&optional noprompt)
+  "Give up completing the puzzle, showing the solutions.
+
+Prompts the user and shows the solutions if the answer is \"yes\".
+With a prefix argument NOPROMPT non-nil, doesn't prompt."
+  (interactive "P")
+  (when (or noprompt (yes-or-no-p "Really give up? "))
     (save-excursion
       (with-current-buffer (concat
                             (buffer-name hiddenquote-buffer) " - Syllables")
@@ -1500,10 +1623,13 @@ Character cell bindings:
           (setq i (1+ i))))
       (hiddenquote-timer-stop-timer))))
 
-(defun hiddenquote-quit ()
-  "Prompt the user and kill the buffer if the answer is \"yes\"."
-  (interactive)
-  (when (yes-or-no-p "Really quit playing Hiddenquote? ")
+(defun hiddenquote-quit (&optional noprompt)
+  "Stop playing hiddenquote, without saving the progress.
+
+Prompts the user and kills the buffer if the answer is \"yes\".
+With a prefix argument NOPROMPT non-nil, doesn't prompt."
+  (interactive "P")
+  (when (or noprompt (yes-or-no-p "Really quit playing Hiddenquote? "))
     (hiddenquote-timer-stop-timer)
     (let ((name (buffer-name)))
       (dolist (buff (mapcar (lambda (suffix)
